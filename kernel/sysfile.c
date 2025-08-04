@@ -65,9 +65,13 @@ sys_dup(void)
   return fd;
 }
 
+static _Atomic uint64 readcount = 0;
+
 uint64
 sys_read(void)
 {
+  readcount++;
+
   struct file *f;
   int n;
   uint64 p;
@@ -502,4 +506,10 @@ sys_pipe(void)
     return -1;
   }
   return 0;
+}
+
+uint64
+sys_getreadcount(void)
+{
+  return readcount;
 }
