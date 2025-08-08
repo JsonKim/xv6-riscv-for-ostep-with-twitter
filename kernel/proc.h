@@ -24,6 +24,7 @@ struct cpu {
   struct context context;     // swtch() here to enter scheduler().
   int noff;                   // Depth of push_off() nesting.
   int intena;                 // Were interrupts enabled before push_off()?
+  uint64 rng_state;           // CPU별 랜덤 상태
 };
 
 extern struct cpu cpus[NCPU];
