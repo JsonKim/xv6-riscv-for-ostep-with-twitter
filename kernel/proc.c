@@ -125,6 +125,7 @@ found:
   p->pid = allocpid();
   p->state = USED;
   p->tickets = 1;
+  p->ticks = 0;
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -171,6 +172,7 @@ freeproc(struct proc *p)
   p->xstate = 0;
   p->state = UNUSED;
   p->tickets = 0;
+  p->ticks = 0;
 }
 
 // Create a user page table for a given process, with no user memory,
@@ -443,6 +445,7 @@ scheduler(void)
         // to release its lock and then reacquire it
         // before jumping back to us.
         p->state = RUNNING;
+        p->ticks++;
         c->proc = p;
         swtch(&c->context, &p->context);
 
