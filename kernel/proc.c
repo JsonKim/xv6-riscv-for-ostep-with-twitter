@@ -4,6 +4,7 @@
 #include "riscv.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "pstat.h"
 #include "defs.h"
 
 struct cpu cpus[NCPU];
@@ -687,5 +688,24 @@ procdump(void)
       state = "???";
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
+  }
+}
+
+void
+makepstat(struct pstat *pstat)
+{
+  memset(pstat, 0, sizeof(struct pstat));
+
+  struct proc *p = proc;
+  int i = 0;
+  for (; p < &proc[NPROC]; p++, i++) {
+    acquire(&p->lock);
+    if (p->state != UNUSED) {
+      pstat->inuse[i] = 1;
+      pstat->tickets[i] = p->tickets;
+      pstat->pid[i] = p->pid;
+      pstat->ticks[i] = p->ticks;
+    }
+    release(&p->lock);
   }
 }
