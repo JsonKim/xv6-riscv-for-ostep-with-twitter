@@ -438,21 +438,22 @@ scheduler(void)
     intr_on();
     intr_off();
 
+    struct proc *runnable_procs[NPROC];
+    uint32 tickets[NPROC];
     uint32 total_tickets = 0;
+    int runnable_count = 0;
+
     for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
       if(p->state == RUNNABLE) {
+        runnable_procs[runnable_count] = p;
+        tickets[runnable_count] = p->tickets;
         total_tickets += p->tickets;
+        runnable_count++;
       }
       release(&p->lock);
     }
     
-    if (total_tickets == 0) {
-      // nothing to run; stop running on this core until an interrupt.
-      asm volatile("wfi");
-      continue;;
-    }
-
     // 프로세스 A, B, C가 가진 티켓의 수량이 30개, 20개 10개 이면
     // A: 1~30, B: 31~50, C: 51~60 으로 보정하여 추첨 할 수 있도록
     // 현재까지 추첨되지 않은 프로세스의 티켓들을 누적
@@ -460,11 +461,14 @@ scheduler(void)
     uint32 cumulative_tickets = 0;
     int found = 0;
 
-    for(p = proc; p < &proc[NPROC]; p++) {
-      acquire(&p->lock);
-      if(p->state == RUNNABLE) {
-        cumulative_tickets += p->tickets;
-        if (winning_number <= cumulative_tickets) {
+    for(int i = 0; i < runnable_count; i++) {
+      cumulative_tickets += tickets[i];
+      if (winning_number <= cumulative_tickets) {
+        p = runnable_procs[i];
+        acquire(&p->lock);
+
+        // 프로세스가 상태가 변경되지 않았는지 검사
+        if(p->state == RUNNABLE) {
           // Switch to chosen process.  It is the process's job
           // to release its lock and then reacquire it
           // before jumping back to us.
@@ -478,12 +482,15 @@ scheduler(void)
           c->proc = 0;
           found = 1;
         }
-      }
-      release(&p->lock);
-      
-      if(found == 1) {
+        release(&p->lock);
         break;
       }
+    }
+
+    // RUNNABLE인 프로세스가 없거나, 추첨된 프로세스가 이미 실행된 경우
+    if (found == 0) {
+      // nothing to run; stop running on this core until an interrupt.
+      asm volatile("wfi");
     }
   }
 }
