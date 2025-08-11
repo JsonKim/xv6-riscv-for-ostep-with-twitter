@@ -459,7 +459,7 @@ scheduler(void)
     // 현재까지 추첨되지 않은 프로세스의 티켓들을 누적
     uint32 winning_number = rand_range(1, total_tickets);
     uint32 cumulative_tickets = 0;
-    int found = 0;
+    _Bool found = 0;
 
     for(int i = 0; i < runnable_count; i++) {
       cumulative_tickets += tickets[i];
