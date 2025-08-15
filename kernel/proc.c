@@ -27,6 +27,8 @@ extern char trampoline[]; // trampoline.S
 // must be acquired before any p->lock.
 struct spinlock wait_lock;
 
+static uint64 min_pass = 0;
+
 // Allocate a page for each process's kernel stack.
 // Map it high in memory, followed by an invalid
 // guard page.
@@ -127,7 +129,7 @@ found:
   p->state = USED;
   p->tickets = 1;
   p->ticks = 0;
-  p->pass = 0;
+  p->pass = min_pass;
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -470,6 +472,8 @@ scheduler(void)
 
         // 프로세스가 상태가 변경되지 않았는지 검사
         if(min_pass_proc->state == RUNNABLE) {
+          min_pass = min_pass_proc->pass;
+
           // Switch to chosen process.  It is the process's job
           // to release its lock and then reacquire it
           // before jumping back to us.
