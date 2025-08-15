@@ -447,23 +447,21 @@ scheduler(void)
     for(p = proc; p < &proc[NPROC]; p++) {
       struct proc *prev_min_pass_proc = min_pass_proc;
 
-      if (prev_min_pass_proc != 0) {
-        acquire(&prev_min_pass_proc->lock);
-      }
       acquire(&p->lock);
       if(p->state == RUNNABLE) {
         if (min_pass_proc == 0) {
           min_pass_proc = p;
-        } else if (p->pass < min_pass_proc->pass) {
-          min_pass_proc = p;
-        } else if (p->pass == min_pass_proc->pass && p->pid < min_pass_proc->pid) {
-          min_pass_proc = p;
+        } else {
+          acquire(&prev_min_pass_proc->lock);
+          if (p->pass < min_pass_proc->pass) {
+            min_pass_proc = p;
+          } else if (p->pass == min_pass_proc->pass && p->pid < min_pass_proc->pid) {
+            min_pass_proc = p;
+          }
+          release(&prev_min_pass_proc->lock);
         }
       }
       release(&p->lock);
-      if (prev_min_pass_proc != 0) {
-        release(&prev_min_pass_proc->lock);
-      }
     }
 
     _Bool found = 0;
