@@ -107,4 +107,5 @@ struct proc {
   char name[16];               // Process name (debugging)
   uint32 tickets;
   uint32 ticks;
+  uint64 pass;
 };
