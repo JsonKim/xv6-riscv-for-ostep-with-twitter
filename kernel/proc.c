@@ -476,6 +476,7 @@ scheduler(void)
           // before jumping back to us.
           p->state = RUNNING;
           p->ticks++;
+          p->pass += STRIDE_SCALE / (uint64)p->tickets;
           c->proc = p;
           swtch(&c->context, &p->context);
 
