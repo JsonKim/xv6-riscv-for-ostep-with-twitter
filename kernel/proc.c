@@ -445,52 +445,46 @@ scheduler(void)
     struct proc *min_pass_proc = 0;
 
     for(p = proc; p < &proc[NPROC]; p++) {
-      struct proc *prev_min_pass_proc = min_pass_proc;
-
       acquire(&p->lock);
-      if(p->state == RUNNABLE) {
-        if (min_pass_proc == 0) {
-          min_pass_proc = p;
-        } else {
-          acquire(&prev_min_pass_proc->lock);
-          if (p->pass < min_pass_proc->pass) {
-            min_pass_proc = p;
-          } else if (p->pass == min_pass_proc->pass && p->pid < min_pass_proc->pid) {
-            min_pass_proc = p;
-          }
-          release(&prev_min_pass_proc->lock);
-        }
+      if (p->state != RUNNABLE) {
+        release(&p->lock);
+        continue;
       }
-      release(&p->lock);
-    }
 
-    _Bool found = 0;
-    if (min_pass_proc != 0) {
-        acquire(&min_pass_proc->lock);
-
-        // 프로세스가 상태가 변경되지 않았는지 검사
-        if(min_pass_proc->state == RUNNABLE) {
-          min_pass = min_pass_proc->pass;
-
-          // Switch to chosen process.  It is the process's job
-          // to release its lock and then reacquire it
-          // before jumping back to us.
-          min_pass_proc->state = RUNNING;
-          min_pass_proc->ticks++;
-          min_pass_proc->pass += STRIDE_SCALE / (uint64)min_pass_proc->tickets;
-          c->proc = min_pass_proc;
-          swtch(&c->context, &min_pass_proc->context);
-
-          // Process is done running for now.
-          // It should have changed its p->state before coming back.
-          c->proc = 0;
-          found = 1;
-        }
+      if (min_pass_proc == 0) {
+        min_pass_proc = p;
+      } else if (
+          (p->pass < min_pass_proc->pass) ||
+          (p->pass == min_pass_proc->pass && p->pid < min_pass_proc->pid)
+      ) {
         release(&min_pass_proc->lock);
+        min_pass_proc = p;
+      } else {
+        release(&p->lock);
+      }
     }
 
-    // RUNNABLE인 프로세스가 없거나, 실행대상 프로세스가 이미 실행된 경우
-    if (found == 0) {
+    if (min_pass_proc != 0) {
+        // min_pass_proc은 찾는 과정에서 이미 lock이 걸려있기 때문에
+        // 상태가 유지된다.
+
+        min_pass = min_pass_proc->pass;
+
+        // Switch to chosen process.  It is the process's job
+        // to release its lock and then reacquire it
+        // before jumping back to us.
+        min_pass_proc->state = RUNNING;
+        min_pass_proc->ticks++;
+        min_pass_proc->pass += STRIDE_SCALE / (uint64)min_pass_proc->tickets;
+        c->proc = min_pass_proc;
+        swtch(&c->context, &min_pass_proc->context);
+
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        c->proc = 0;
+
+        release(&min_pass_proc->lock);
+    } else {
       // nothing to run; stop running on this core until an interrupt.
       asm volatile("wfi");
     }
