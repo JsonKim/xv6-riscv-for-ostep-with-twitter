@@ -27,7 +27,7 @@ extern char trampoline[]; // trampoline.S
 // must be acquired before any p->lock.
 struct spinlock wait_lock;
 
-static uint64 min_pass = 0;
+static _Atomic uint64 min_pass = 0;
 
 // Allocate a page for each process's kernel stack.
 // Map it high in memory, followed by an invalid
