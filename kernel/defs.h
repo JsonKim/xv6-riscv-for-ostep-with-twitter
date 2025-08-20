@@ -189,3 +189,6 @@ uint32          rand_range(uint32 min, uint32 max);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
+
+// Q32.32의 1.0을 L(max_tickets)로 사용
+#define STRIDE_SCALE (1ULL<<32)
